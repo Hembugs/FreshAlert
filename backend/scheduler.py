@@ -3,6 +3,8 @@ from database import get_expiring_products, delete_product
 from notifications import send_notification
 import os
 
+print('SCHEDULER MODULE LOADED')
+
 token_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fcm_token.txt')
 if os.path.exists(token_path):
     with open(token_path, 'r') as f:
