@@ -102,8 +102,6 @@ document.getElementById('scan-btn').addEventListener('click', async () => {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }});
     cameraFeed.srcObject = stream;
     cameraContainer.classList.add('open');
-    cameraFeed.onloadedmetadata = () => {
-    cameraFeed.play();
     startScanning();
   } catch (e) {
     alert('Could not access camera');
