@@ -117,9 +117,7 @@ function stopCamera() {
   }
   cameraContainer.classList.remove('open');
 }
-```
-```
-firebase deploy --only hosting
+
 function startScanning() {
   const codeReader = new ZXingBrowser.BrowserMultiFormatReader();
 
