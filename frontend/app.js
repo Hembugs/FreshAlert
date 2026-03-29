@@ -1,4 +1,4 @@
-const BACKEND_URL = 'https://freshalert-backend-npml.onrender.com';
+const BACKEND_URL = 'https://freshalert-0rkl.onrender.com';
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let stream = null;

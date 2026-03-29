@@ -30,6 +30,6 @@ def check_expiry():
 
 def start_scheduler():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(check_expiry, 'cron', hour=9)
+    scheduler.add_job(check_expiry, 'interval', minutes=1)
     scheduler.start()
     return scheduler
