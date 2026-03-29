@@ -14,21 +14,20 @@ print(f'FCM token loaded: {FCM_TOKEN is not None}')
 
 def check_expiry():
     print('Running expiry check...')
+    
+    if not FCM_TOKEN:
+        print('No FCM token found, skipping notifications')
+        return
+
     products_today = get_expiring_products(0)
     print(f'Products expiring today: {products_today}')
-    # 7 days warning
+
     for product in get_expiring_products(7):
         send_notification(FCM_TOKEN, '🛒 Expiring Soon', f"{product['name']} expires in a week")
-
-    # 3 days warning
     for product in get_expiring_products(3):
         send_notification(FCM_TOKEN, '⚠️ Expiring Soon', f"{product['name']} expires in 3 days")
-
-    # 1 day warning
     for product in get_expiring_products(1):
         send_notification(FCM_TOKEN, '🚨 Expiring Tomorrow', f"{product['name']} expires tomorrow")
-
-    # expired today — notify and delete
     for product in get_expiring_products(0):
         send_notification(FCM_TOKEN, '❌ Expired', f"{product['name']} has expired today")
         delete_product(product['id'])
