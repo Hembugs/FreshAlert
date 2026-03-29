@@ -212,9 +212,9 @@ async function initNotifications() {
       body: JSON.stringify({ token })
     });
 
-    console.log('Token registered with backend');
+    alert('Token registered successfully');
   } catch (e) {
-    console.error('Notification setup failed:', e);
+    alert('Notification setup failed: ' + e.message);
   }
 }
 
