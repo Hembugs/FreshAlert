@@ -49,6 +49,11 @@ def test_notifications():
     check_expiry()
     return jsonify({'success': True})
 
+@app.route('/reinit-db', methods=['GET'])
+def reinit_db():
+    init_db()
+    return jsonify({'success': True})
+
 @app.route('/check-token', methods=['GET'])
 def check_token():
     from database import get_fcm_token
