@@ -2,9 +2,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from database import init_db, add_product, get_all_products, delete_product
 from notifications import init_firebase
-from scheduler import start_scheduler, check_expiry
+from scheduler import start_scheduler, check_expiry 
 import requests
 import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
 CORS(app)
@@ -67,6 +68,15 @@ def register_token():
 def test_notifications():
     check_expiry()
     return jsonify({'success': True})
+
+@app.route('/check-token', methods=['GET'])
+def check_token():
+    token_path = os.path.join(BASE_DIR, 'fcm_token.txt')
+    if os.path.exists(token_path):
+        with open(token_path, 'r') as f:
+            token = f.read()
+        return jsonify({'token': token[:50] + '...'})
+    return jsonify({'token': None})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
