@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from database import init_db, add_product, get_all_products, delete_product
+from database import init_db, add_product, get_all_products, delete_product, save_fcm_token
 from notifications import init_firebase
-from scheduler import start_scheduler, check_expiry 
-import requests
+from scheduler import start_scheduler, check_expiry
 import os
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
@@ -36,32 +36,12 @@ def remove_product(product_id):
     delete_product(product_id)
     return jsonify({'success': True})
 
-@app.route('/barcode/<barcode>', methods=['GET'])
-def lookup_barcode(barcode):
-    try:
-        response = requests.get(
-            f'https://world.openfoodfacts.org/api/v2/product/{barcode}',
-            headers={'User-Agent': 'FreshAlert/1.0'}
-        )
-        data = response.json()
-        if data.get('status') == 1:
-            product = data['product']
-            return jsonify({
-                'found': True,
-                'name': product.get('product_name', ''),
-            })
-        return jsonify({'found': False})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/register-token', methods=['POST'])
 def register_token():
     data = request.get_json(force=True, silent=True)
     if not data or 'token' not in data:
         return jsonify({'error': 'token is required'}), 400
-    # save token to .env or a simple file for now
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fcm_token.txt'), 'w') as f:
-        f.write(data['token'])
+    save_fcm_token(data['token'])
     return jsonify({'success': True})
 
 @app.route('/test-notifications', methods=['GET'])
@@ -71,10 +51,9 @@ def test_notifications():
 
 @app.route('/check-token', methods=['GET'])
 def check_token():
-    token_path = os.path.join(BASE_DIR, 'fcm_token.txt')
-    if os.path.exists(token_path):
-        with open(token_path, 'r') as f:
-            token = f.read()
+    from database import get_fcm_token
+    token = get_fcm_token()
+    if token:
         return jsonify({'token': token[:50] + '...'})
     return jsonify({'token': None})
 

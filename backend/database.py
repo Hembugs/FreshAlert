@@ -5,7 +5,7 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'freshalert.d
 
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # returns rows as dictionaries instead of tuples
+    conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
@@ -16,6 +16,11 @@ def init_db():
             name TEXT NOT NULL,
             barcode TEXT,
             expiry_date TEXT NOT NULL
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS tokens (
+            token TEXT NOT NULL
         )
     ''')
     conn.commit()
@@ -50,3 +55,20 @@ def get_expiring_products(days):
     ''', (str(days),)).fetchall()
     conn.close()
     return [dict(p) for p in products]
+
+def save_fcm_token(token):
+    conn = get_connection()
+    conn.execute('DELETE FROM tokens')
+    conn.execute('INSERT INTO tokens (token) VALUES (?)', (token,))
+    conn.commit()
+    conn.close()
+
+def get_fcm_token():
+    conn = get_connection()
+    try:
+        row = conn.execute('SELECT token FROM tokens LIMIT 1').fetchone()
+        conn.close()
+        return row['token'] if row else None
+    except:
+        conn.close()
+        return None

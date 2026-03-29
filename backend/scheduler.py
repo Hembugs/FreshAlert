@@ -1,5 +1,5 @@
 from apscheduler.schedulers.background import BackgroundScheduler
-from database import get_expiring_products, delete_product
+from database import get_expiring_products, delete_product, get_fcm_token
 from notifications import send_notification
 import os
 
@@ -7,16 +7,10 @@ print('SCHEDULER MODULE LOADED')
 
 def check_expiry():
     print('Running expiry check...')
-    
-    token_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fcm_token.txt')
-    if os.path.exists(token_path):
-        with open(token_path, 'r') as f:
-            FCM_TOKEN = f.read().strip()
-    else:
-        FCM_TOKEN = os.getenv('FCM_TOKEN')
-    
+
+    FCM_TOKEN = get_fcm_token()
     print(f'FCM token found: {FCM_TOKEN is not None}')
-    
+
     if not FCM_TOKEN:
         print('No FCM token, skipping notifications')
         return
