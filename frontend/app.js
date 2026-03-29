@@ -115,34 +115,22 @@ function stopCamera() {
     stream.getTracks().forEach(t => t.stop());
     stream = null;
   }
-  clearInterval(barcodeInterval);
   cameraContainer.classList.remove('open');
 }
-
+```
+```
+firebase deploy --only hosting
 function startScanning() {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
+  const codeReader = new ZXingBrowser.BrowserMultiFormatReader();
 
-  barcodeInterval = setInterval(async () => {
-    if (cameraFeed.readyState !== cameraFeed.HAVE_ENOUGH_DATA) return;
-
-    canvas.width = cameraFeed.videoWidth;
-    canvas.height = cameraFeed.videoHeight;
-    ctx.drawImage(cameraFeed, 0, 0);
-
-    try {
-      const detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
-      const barcodes = await detector.detect(canvas);
-
-      if (barcodes.length > 0) {
-        const barcode = barcodes[0].rawValue;
-        stopCamera();
-        await lookupBarcode(barcode);
-      }
-    } catch (e) {
-      console.error('Barcode detection error:', e);
+  codeReader.decodeFromVideoElement(cameraFeed, async (result, error) => {
+    if (result) {
+      console.log('Barcode detected:', result.getText());
+      codeReader.reset();
+      stopCamera();
+      await lookupBarcode(result.getText());
     }
-  }, 500);
+  });
 }
 
 async function lookupBarcode(barcode) {
