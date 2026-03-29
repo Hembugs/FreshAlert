@@ -1,8 +1,9 @@
-const BACKEND_URL = 'https://freshalert-backend-npml.onrender.com'; // change this to Render URL when deployed
+const BACKEND_URL = 'https://freshalert-backend-npml.onrender.com';
 
 // ─── State ───────────────────────────────────────────────────────────────────
-let stream = null; // camera stream
-let barcodeInterval = null; // barcode scanning interval
+let stream = null;
+let barcodeInterval = null;
+let isScanning = false;
 
 // ─── Elements ────────────────────────────────────────────────────────────────
 const productList = document.getElementById('product-list');
@@ -111,42 +112,60 @@ document.getElementById('scan-btn').addEventListener('click', async () => {
 document.getElementById('cancel-scan').addEventListener('click', stopCamera);
 
 function stopCamera() {
+  isScanning = false;
   if (stream) {
     stream.getTracks().forEach(t => t.stop());
     stream = null;
   }
+  try { Quagga.stop(); } catch(e) {}
   cameraContainer.classList.remove('open');
 }
 
 function startScanning() {
-  const codeReader = new ZXingBrowser.BrowserMultiFormatReader();
-
-  codeReader.decodeFromVideoElement(cameraFeed, async (result, error) => {
-    if (result) {
-      console.log('Barcode detected:', result.getText());
-      codeReader.reset();
-      stopCamera();
-      await lookupBarcode(result.getText());
+  Quagga.init({
+    inputStream: {
+      name: 'Live',
+      type: 'LiveStream',
+      target: cameraFeed,
+      constraints: { facingMode: 'environment' }
+    },
+    decoder: {
+      readers: ['ean_reader', 'ean_8_reader', 'upc_reader']
     }
+  }, err => {
+    if (err) {
+      alert('Scanner error: ' + err);
+      return;
+    }
+    Quagga.start();
+  });
+
+  Quagga.onDetected(result => {
+    if (isScanning) return;
+    isScanning = true;
+    const barcode = result.codeResult.code;
+    Quagga.stop();
+    stopCamera();
+    lookupBarcode(barcode);
   });
 }
 
 async function lookupBarcode(barcode) {
   try {
-    console.log('Looking up barcode:', barcode);
-    const res = await fetch(`${BACKEND_URL}/barcode/${barcode}`);
-    console.log('Response Status:', res.status);
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}`, {
+      headers: { 'User-Agent': 'FreshAlert/1.0' }
+    });
     const data = await res.json();
-    console.log('Response Data', res.data);
 
-    if (data.found && data.name) {
-      nameInput.value = data.name;
+    if (data.status === 1 && data.product.product_name) {
+      nameInput.value = data.product.product_name;
     } else {
       nameInput.value = '';
       alert('Product not found — please enter the name manually');
     }
   } catch (e) {
     console.error('Barcode lookup failed:', e);
+    alert('Lookup failed — please enter the name manually');
   }
 }
 
@@ -154,6 +173,52 @@ async function lookupBarcode(barcode) {
 modal.addEventListener('click', e => {
   if (e.target === modal) modal.classList.remove('open');
 });
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+async function initNotifications() {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('Notification permission denied');
+      return;
+    }
+
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    console.log('Service worker registered');
+
+    const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js');
+    const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging.js');
+
+    const firebaseApp = initializeApp({
+      apiKey: "AIzaSyDt__8uYr4mSKRPb_00gvzfbkS5_XMGM7s",
+      authDomain: "freshalert-61e16.firebaseapp.com",
+      projectId: "freshalert-61e16",
+      storageBucket: "freshalert-61e16.firebasestorage.app",
+      messagingSenderId: "63492535322",
+      appId: "1:63492535322:web:2e34db39a6a5a7661ecda3"
+    });
+
+    const messaging = getMessaging(firebaseApp);
+    const token = await getToken(messaging, {
+      vapidKey: 'BICEn6V7CgiV8VgUsO02Lt43K2vySLTDVe9TrPNEHwwX7jnszLY-FRUdBnMZS3MuW3DPM8kRB-2qYc1CLUXz8AI',
+      serviceWorkerRegistration: registration
+    });
+
+    console.log('FCM token:', token);
+
+    await fetch(`${BACKEND_URL}/register-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+
+    console.log('Token registered with backend');
+  } catch (e) {
+    console.error('Notification setup failed:', e);
+  }
+}
+
+initNotifications();
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 loadProducts();

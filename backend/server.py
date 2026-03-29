@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from database import init_db, add_product, get_all_products, delete_product
 from notifications import init_firebase
-from scheduler import start_scheduler
+from scheduler import start_scheduler, check_expiry
 import requests
 import os
 
@@ -61,6 +61,11 @@ def register_token():
     # save token to .env or a simple file for now
     with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fcm_token.txt'), 'w') as f:
         f.write(data['token'])
+    return jsonify({'success': True})
+
+@app.route('/test-notifications', methods=['GET'])
+def test_notifications():
+    check_expiry()
     return jsonify({'success': True})
 
 if __name__ == '__main__':
