@@ -46,7 +46,11 @@ def register_token():
 
 @app.route('/test-notifications', methods=['GET'])
 def test_notifications():
-    check_expiry()
+    try:
+        check_expiry()
+    except Exception as e:
+        print(f'check_expiry crashed: {e}')
+        return jsonify({'error': str(e)}), 500
     return jsonify({'success': True})
 
 @app.route('/reinit-db', methods=['GET'])
